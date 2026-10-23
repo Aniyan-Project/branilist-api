@@ -29,4 +29,36 @@ Depois da publicação, crie uma tag/release GitHub correspondente à versão pu
 
 ## Automação
 
-O workflow CI valida Node.js 22/24, testes, geração e montagem do pacote. Também oferece execução manual, inclusive quando um commit inclui `[skip ci]`. A automação não tem credenciais de publicação e não publica no npm. Configure publicação confiável no registro em uma mudança específica antes de automatizar releases.
+O workflow CI valida Node.js 22/24, testes, geração e montagem do pacote. Também oferece execução manual, inclusive quando um commit inclui `[skip ci]`.
+
+### Publicação pelo GitHub Actions
+
+O workflow [Publish to npm](https://github.com/Aniyan-Project/branilist-api/actions/workflows/publish.yml) usa OIDC Trusted Publishing, sem `NPM_TOKEN` ou outros tokens npm permanentes no GitHub. A confiança no npm deve apontar para:
+
+| Campo | Valor |
+| --- | --- |
+| Organização GitHub | `Aniyan-Project` |
+| Repositório | `branilist-api` |
+| Workflow | `publish.yml` |
+| Ambiente | `npm-publish` |
+| Permissão | `npm publish` |
+
+O ambiente `npm-publish` aceita somente a branch `main`. Apenas o job de publicação pode solicitar uma identidade OIDC. As actions são fixadas por SHA e o pacote é construído e testado em um job separado, sem permissão OIDC. O job de publicação recebe o mesmo `.tgz` validado e verifica seu checksum, sem executar scripts do pacote. O npm gera a comprovação de origem (provenance) na publicação via OIDC.
+
+Para lançar uma versão estável:
+
+1. Atualize `package.json`, `package-lock.json` e `CHANGELOG.md`, valide e envie as alterações para `main`.
+2. Abra **Actions → Publish to npm → Run workflow**, selecionando `main`.
+3. Informe a versão exata no formato `x.y.z`, sem o prefixo `v`.
+4. Deixe **Publish to npm after validation** desmarcado para uma prévia. Ela executa os testes, instala o pacote em consumidores ESM/CommonJS e valida a identidade OIDC do GitHub; não publica nem troca essa identidade por uma credencial npm.
+5. Para publicar, execute novamente com a mesma versão e marque essa opção. O workflow rejeita versões já publicadas. Depois, registre a tag/release correspondente no GitHub.
+
+O processo não incrementa versões nem publica a cada push. O modo de prévia não testa uma publicação real no npm; a primeira nova versão pelo workflow confirma também a troca de credenciais OIDC com o registro.
+
+Para recriar a configuração de confiança, um proprietário do pacote pode usar:
+
+```sh
+npm trust github @aniyan-project/branilist-api --repo Aniyan-Project/branilist-api --file publish.yml --environment npm-publish --allow-publish --yes
+```
+
+O npm pode exigir confirmação de 2FA para alterar essa configuração. A publicação manual local continua disponível com a autenticação exigida pelo npm. Consulte a [documentação oficial de Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) ao alterar a relação de confiança.

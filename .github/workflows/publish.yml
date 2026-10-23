@@ -1,0 +1,130 @@
+name: Publish to npm
+run-name: npm ${{ inputs.version }} · ${{ inputs.publish && 'publish' || 'validate' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable version already committed in package.json (e.g. 0.1.1)'
+        required: true
+        type: string
+      publish:
+        description: 'Publish to npm after validation (leave off for a preview)'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      filename: ${{ steps.package.outputs.filename }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
+          const expected = process.env.RELEASE_VERSION
+          if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(expected ?? '')) throw Error('Use a stable x.y.z version without a v prefix')
+          if (pkg.name !== '@aniyan-project/branilist-api' || pkg.private === true) throw Error('Unexpected package identity')
+          if (pkg.version !== expected || lock.version !== expected || lock.packages[''].version !== expected) throw Error('Commit matching package.json and lockfile versions first')
+          NODE
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm run test:package
+      - name: Prepare verified package
+        id: package
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync, appendFileSync } from 'node:fs'
+          import { createHash } from 'node:crypto'
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+          const filename = `aniyan-project-branilist-api-${version}.tgz`
+          const hash = createHash('sha256').update(readFileSync(filename)).digest('hex')
+          writeFileSync(`${filename}.sha256`, `${hash}  ${filename}\n`)
+          appendFileSync(process.env.GITHUB_OUTPUT, `filename=${filename}\n`)
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-package
+          path: |
+            ${{ steps.package.outputs.filename }}
+            ${{ steps.package.outputs.filename }}.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      PACKAGE_FILE: ${{ needs.validate.outputs.filename }}
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-package
+      - name: Verify package checksum
+        run: sha256sum --check "$PACKAGE_FILE.sha256"
+      - name: Verify GitHub OIDC identity
+        run: |
+          node --input-type=module <<'NODE'
+          const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL)
+          url.searchParams.set('audience', 'npm:registry.npmjs.org')
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` } })
+          if (!response.ok) throw Error(`GitHub OIDC failed: HTTP ${response.status}`)
+          const token = (await response.json()).value
+          if (typeof token !== 'string') throw Error('GitHub did not return an OIDC token')
+          const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
+          const repo = 'Aniyan-Project/branilist-api'
+          if (claims.repository !== repo || claims.sub !== `repo:${repo}:environment:npm-publish` || claims.workflow_ref !== `${repo}/.github/workflows/publish.yml@refs/heads/main` || claims.aud !== 'npm:registry.npmjs.org') throw Error('Unexpected OIDC workflow identity')
+          console.log('GitHub issued the expected workflow/environment identity. No credentials were printed or saved.')
+          NODE
+      - name: Publish verified package with OIDC
+        if: inputs.publish
+        run: |
+          node --input-type=module <<'NODE'
+          const url = `https://registry.npmjs.org/@aniyan-project%2fbranilist-api/${process.env.RELEASE_VERSION}`
+          const response = await fetch(url)
+          if (response.status !== 404) throw Error(response.ok ? 'This version already exists; choose a new version' : `Registry check failed: HTTP ${response.status}`)
+          NODE
+          npm publish "$PACKAGE_FILE" --ignore-scripts --access public --tag latest --registry=https://registry.npmjs.org/
+      - name: Write summary
+        env:
+          DID_PUBLISH: ${{ inputs.publish }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs'
+          const mode = process.env.DID_PUBLISH === 'true' ? 'Published' : 'Preview validated; no version was published'
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${mode}\n\nPackage: \`@aniyan-project/branilist-api@${process.env.RELEASE_VERSION}\`\n\nTests, package installation, checksum and GitHub OIDC identity validated.\n`)
+          NODE
