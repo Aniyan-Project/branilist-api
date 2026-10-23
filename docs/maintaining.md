@@ -13,7 +13,7 @@ Atualização do schema não deve publicar versões automaticamente. Mudanças d
 
 ## Primeira publicação no npm
 
-O repositório GitHub e o registro npm são serviços separados. A primeira publicação requer uma conta npm autorizada para o nome `branilist-api` e o cumprimento das exigências de autenticação/2FA da conta.
+O repositório GitHub e o registro npm são serviços separados. A primeira publicação requer uma conta npm autorizada na organização `aniyan-project` para o pacote `@aniyan-project/branilist-api` e o cumprimento das exigências de autenticação/2FA da conta.
 
 ```sh
 npm login
@@ -23,9 +23,9 @@ npm pack --dry-run
 npm publish --access public
 ```
 
-Use a autenticação interativa do npm; não coloque tokens no código nem em mensagens. Confirme o proprietário/organização desejado e a disponibilidade do nome antes de publicar. A versão inicial ainda não publicada pode ser instalada a partir do `.tgz` gerado por `npm pack`.
+Use a autenticação interativa do npm; não coloque tokens no código nem em mensagens. Confirme o proprietário/organização desejado e a disponibilidade do nome antes de publicar. Para validar uma versão antes da publicação, instale o `.tgz` gerado por `npm pack`.
 
-Depois da publicação, ajuste a observação de pré-publicação no README e crie uma tag/release GitHub correspondente à versão publicada. Não reutilize uma versão já publicada.
+Depois da publicação, crie uma tag/release GitHub correspondente à versão publicada. Não reutilize uma versão já publicada.
 
 ## Automação
 

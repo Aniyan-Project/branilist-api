@@ -1,5 +1,5 @@
 {
-  "name": "branilist-api",
+  "name": "@aniyan-project/branilist-api",
   "version": "0.1.0",
   "description": "Typed, configurable GraphQL SDK for the Branilist public API.",
   "license": "MIT",

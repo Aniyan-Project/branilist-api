@@ -1,4 +1,4 @@
-# branilist-api
+# @aniyan-project/branilist-api
 
 SDK em TypeScript e JavaScript para a **API pública GraphQL do Branilist**. Selecione os campos de que precisa e receba respostas com tipos inferidos, sem escrever manualmente os tipos de cada operação.
 
@@ -12,16 +12,16 @@ SDK em TypeScript e JavaScript para a **API pública GraphQL do Branilist**. Sel
 
 ## Instalação e compatibilidade
 
-O código está pronto para a primeira publicação no npm. Enquanto a versão inicial não estiver publicada, instale a partir do arquivo `.tgz` produzido por `npm pack` (veja [desenvolvimento](#desenvolvimento)). Depois da publicação:
+Instale o pacote público da organização `aniyan-project`:
 
 ```sh
-npm install branilist-api
+npm install @aniyan-project/branilist-api
 ```
 
 Node.js 22 ou superior. Também pode ser usado em aplicações web com bundler e `fetch`, `AbortController` e `URL` disponíveis. Em React Native, forneça implementações compatíveis quando necessário; PKCE requer criptografia segura. O pacote não inclui polyfills nem armazenamento de credenciais. A integração com cada ambiente mobile deve ser validada pelo aplicativo.
 
 ```ts
-import { createClient, MediaType } from 'branilist-api'
+import { createClient, MediaType } from '@aniyan-project/branilist-api'
 
 const client = createClient({ apiKey: 'SUA_API_KEY' })
 const result = await client.query({
@@ -35,7 +35,7 @@ const result = await client.query({
 console.log(result.mediaPage.nodes[0]?.title.romaji)
 ```
 
-CommonJS: `const { createClient } = require('branilist-api')`.
+CommonJS: `const { createClient } = require('@aniyan-project/branilist-api')`.
 
 API keys devem permanecer no servidor. Aplicativos públicos web/mobile devem usar OAuth para acessar dados de usuários. O SDK não altera as exigências de autenticação e escopos de cada campo.
 
@@ -152,7 +152,7 @@ Os metadados expõem status HTTP, tentativa, duração e os headers de limites c
 ## Paginação
 
 ```ts
-import { paginate } from 'branilist-api'
+import { paginate } from '@aniyan-project/branilist-api'
 
 for await (const item of paginate(async (page, context) => {
   const result = await authenticated.query({
@@ -176,7 +176,7 @@ for await (const item of paginate(async (page, context) => {
 ## Documentos GraphQL e respostas parciais
 
 ```ts
-import { GraphQLRequestError, HTTPError } from 'branilist-api'
+import { GraphQLRequestError, HTTPError } from '@aniyan-project/branilist-api'
 
 type APIData = { api: { name: string; version: string } }
 const info = await client.request<APIData>(`
@@ -207,7 +207,7 @@ Documentos livres permitem fragments e directives. Nesse modo, o tipo genérico 
 Cadastre um aplicativo no Branilist e utilize exatamente a URI de redirecionamento registrada.
 
 ```ts
-import { BranilistOAuth, createPKCE, validateAuthorizationCallback } from 'branilist-api'
+import { BranilistOAuth, createPKCE, validateAuthorizationCallback } from '@aniyan-project/branilist-api'
 
 const oauth = new BranilistOAuth({
   clientId: 'SEU_CLIENT_ID',
