@@ -1,0 +1,40 @@
+{
+  "name": "branilist-api",
+  "version": "0.1.0",
+  "description": "Typed, configurable GraphQL SDK for the Branilist public API.",
+  "license": "MIT",
+  "author": "Aniyan Project",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
+    "./schema.graphql": "./schema.graphql",
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "schema.graphql", "LICENSE", "README.md", "CHANGELOG.md"],
+  "engines": { "node": ">=22" },
+  "repository": { "type": "git", "url": "https://github.com/Aniyan-Project/branilist-api.git" },
+  "homepage": "https://github.com/Aniyan-Project/branilist-api#readme",
+  "bugs": { "url": "https://github.com/Aniyan-Project/branilist-api/issues" },
+  "keywords": ["branilist", "graphql", "anime", "manga", "sdk", "typescript", "oauth", "pkce"],
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "schema:sync": "node scripts/sync-schema.mjs",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "npm run build && npm run typecheck && node --test tests/*.test.mjs",
+    "check": "npm run generate:check && npm test",
+    "prepack": "npm run check",
+    "pack:check": "npm pack --dry-run",
+    "test:package": "node scripts/check-package.mjs"
+  },
+  "devDependencies": { "@types/node": "^22.0.0", "graphql": "17.0.2", "typescript": "5.9.3" }
+}
