@@ -45,6 +45,8 @@ O workflow [Publish to npm](https://github.com/Aniyan-Project/branilist-api/acti
 
 O ambiente `npm-publish` aceita somente a branch `main`. Apenas o job de publicação pode solicitar uma identidade OIDC. As actions são fixadas por SHA e o pacote é construído e testado em um job separado, sem permissão OIDC. O job de publicação recebe o mesmo `.tgz` validado e verifica seu checksum, sem executar scripts do pacote. O npm gera a comprovação de origem (provenance) na publicação via OIDC.
 
+A verificação de identidade usa o formato de subject imutável do GitHub, com os IDs da organização (`110223729`) e do repositório (`1430609300`). Renomeações, transferências ou alterações na configuração OIDC precisam de revisão dessa verificação e da relação de confiança no npm.
+
 Para lançar uma versão estável:
 
 1. Atualize `package.json`, `package-lock.json` e `CHANGELOG.md`, valide e envie as alterações para `main`.

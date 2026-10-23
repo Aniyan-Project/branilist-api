@@ -107,7 +107,20 @@ jobs:
           if (typeof token !== 'string') throw Error('GitHub did not return an OIDC token')
           const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
           const repo = 'Aniyan-Project/branilist-api'
-          if (claims.repository !== repo || claims.sub !== `repo:${repo}:environment:npm-publish` || claims.workflow_ref !== `${repo}/.github/workflows/publish.yml@refs/heads/main` || claims.aud !== 'npm:registry.npmjs.org') throw Error('Unexpected OIDC workflow identity')
+          // This repository uses GitHub's immutable subject format (July 2026).
+          const expectedClaims = {
+            iss: 'https://token.actions.githubusercontent.com',
+            aud: 'npm:registry.npmjs.org',
+            repository: repo,
+            repository_id: '1430609300',
+            repository_owner_id: '110223729',
+            ref: 'refs/heads/main',
+            sub: 'repo:Aniyan-Project@110223729/branilist-api@1430609300:environment:npm-publish',
+            workflow_ref: `${repo}/.github/workflows/publish.yml@refs/heads/main`,
+          }
+          for (const [key, expected] of Object.entries(expectedClaims)) {
+            if (claims[key] !== expected) throw Error(`Unexpected OIDC ${key}: ${JSON.stringify(claims[key])}`)
+          }
           console.log('GitHub issued the expected workflow/environment identity. No credentials were printed or saved.')
           NODE
       - name: Publish verified package with OIDC
